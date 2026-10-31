@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug Whisperer — Find Mistakes in Your Python Code</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+      border-bottom: 1px solid #21262d;
+      text-align: center;
+      padding: 72px 24px 60px;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: #1f3a5f;
+      color: #58a6ff;
+      border: 1px solid #388bfd40;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .5px;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+      color: #f0f6fc;
+    }
+    .hero h1 span { color: #f78166; }
+    .hero p {
+      max-width: 560px;
+      margin: 0 auto 32px;
+      color: #8b949e;
+      font-size: 1.05rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; margin-right: 12px; }
+    .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+
+    /* ── Terminal box ── */
+    .terminal-wrap {
+      max-width: 680px;
+      margin: 48px auto 0;
+      text-align: left;
+    }
+    .terminal {
+      background: #010409;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .terminal-bar {
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+      padding: 10px 16px;
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+    .terminal-body { padding: 20px 24px; font-family: "Menlo","Consolas","Courier New",monospace; font-size: 13px; line-height: 1.9; }
+    .t-prompt { color: #3fb950; }
+    .t-cmd { color: #e6edf3; }
+    .t-box-top { color: #58a6ff; }
+    .t-label { color: #f0883e; font-weight: 700; }
+    .t-where { color: #79c0ff; }
+    .t-arrow { color: #f78166; }
+    .t-suggest { color: #56d364; }
+    .t-muted { color: #484f58; }
+
+    /* ── Features ── */
+    .section { max-width: 900px; margin: 0 auto; padding: 64px 24px; }
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #f0f6fc;
+    }
+    .section-sub { color: #8b949e; margin-bottom: 40px; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .card-icon { font-size: 1.8rem; margin-bottom: 12px; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: #f0f6fc; }
+    .card p { color: #8b949e; font-size: 0.9rem; line-height: 1.6; }
+
+    /* ── Steps ── */
+    .steps { counter-reset: step; display: flex; flex-direction: column; gap: 20px; }
+    .step {
+      display: flex;
+      gap: 20px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      padding: 24px;
+      align-items: flex-start;
+    }
+    .step-num {
+      counter-increment: step;
+      min-width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #1f3a5f;
+      color: #58a6ff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-num::before { content: counter(step); }
+    .step-body h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; color: #f0f6fc; }
+    .step-body p { color: #8b949e; font-size: 0.88rem; }
+    .step-body code {
+      background: #010409;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: "Menlo","Consolas",monospace;
+      font-size: 0.82rem;
+      color: #79c0ff;
+    }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid #21262d; }
+
+    /* ── CTA ── */
+    .cta {
+      text-align: center;
+      padding: 64px 24px;
+      background: #161b22;
+      border-top: 1px solid #21262d;
+    }
+    .cta h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 12px; color: #f0f6fc; }
+    .cta p { color: #8b949e; margin-bottom: 28px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #484f58;
+      font-size: 12px;
+      border-top: 1px solid #21262d;
+    }
+    footer a { color: #484f58; }
+
+    /* ── Portfolio badge ── */
+    .portfolio-badge {
+      display: inline-block;
+      background: #238636;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="badge">Python Debugging Tool · CLI + pytest Plugin + AI-Agent Skill</div>
+  <h1>🐛 Bug <span>Whisperer</span><span class="portfolio-badge">Portfolio Project</span></h1>
+  <p>Find mistakes in your Python code, understand why they happened, and get clear advice on how to fix them — with friendly boxed error reports and an AI-agent skill that investigates safely with file:line evidence.</p>
+  <a href="#get-started" class="btn btn-primary">Get Started</a>
+  <a href="#how-it-works" class="btn btn-secondary">How It Works</a>
+
+  <!-- Terminal preview -->
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-prompt">$</span> <span class="t-cmd">mistake-box python mycode.py</span></div>
+        <div class="t-muted"> </div>
+        <div class="t-box-top">╔══════════════════════════════════════════════╗</div>
+        <div class="t-box-top">║ <span class="t-label">MISTAKE FOUND</span> - SyntaxError               ║</div>
+        <div class="t-box-top">╠══════════════════════════════════════════════╣</div>
+        <div class="t-box-top">║ <span class="t-label">WHERE</span>   <span class="t-where">mycode.py : line 12</span>              ║</div>
+        <div class="t-box-top">║  <span class="t-arrow">&gt;&gt; 12 |  if x = 5:</span>                        ║</div>
+        <div class="t-box-top">╠══════════════════════════════════════════════╣</div>
+        <div class="t-box-top">║ <span class="t-label">WHAT WENT WRONG</span>                            ║</div>
+        <div class="t-box-top">║   Use <span class="t-suggest">==</span> to compare, not <span class="t-arrow">=</span>                ║</div>
+        <div class="t-box-top">╠══════════════════════════════════════════════╣</div>
+        <div class="t-box-top">║ <span class="t-label">SUGGESTIONS</span>                                ║</div>
+        <div class="t-box-top">║  <span class="t-suggest">1. Replace `=` with `==` on line 12</span>       ║</div>
+        <div class="t-box-top">╚══════════════════════════════════════════════╝</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="section" id="features">
+  <h2 class="section-title">What does it do?</h2>
+  <p class="section-sub">Two tools in one — instant error reports for your terminal, plus an AI-agent skill for deeper analysis.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🔴→🟢</div>
+      <h3>Fix Failing Tests</h3>
+      <p>When your tests turn red, the AI-agent skill investigates every failure in parallel, finds the root cause with file and line evidence, and proposes minimal fixes — rolling back anything that doesn't work, and stopping for human review when it cannot auto-repair.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔍</div>
+      <h3>Review Your Code</h3>
+      <p>Six parallel checks look for logic errors, security issues, missing error handling, concurrency bugs, resource leaks, and test gaps — all with file:line evidence or the finding is not reported.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📦</div>
+      <h3>Friendly Error Boxes</h3>
+      <p>Run any Python file through <code>mistake-box</code> and get a clear, human-readable report showing WHERE the mistake is, WHAT went wrong, and HOW TO FIX it — instead of a confusing raw traceback.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧪</div>
+      <h3>pytest Plugin</h3>
+      <p>Install once with <code>pip install .</code> and every <code>pytest</code> run automatically shows failing tests as friendly boxes. No configuration needed. Disable with <code>--no-mistake-box</code>.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🎓</div>
+      <h3>Built for Learners</h3>
+      <p>14 demo files with intentional mistakes help you practice reading error messages. Each demo shows the wrong code, the error explained, and the correct version — a ready-made learning lab.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Zero Dependencies</h3>
+      <p>Pure Python 3.8+. No external packages required for the core tool. Install once and it works everywhere — terminal, CI, VS Code, PyCharm, any IDE.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section" id="how-it-works">
+  <h2 class="section-title">Two ways to use it</h2>
+  <p class="section-sub">A CLI tool for instant feedback. An AI-agent skill for deep analysis. Both in one package.</p>
+
+  <h3 style="font-size:1.2rem;font-weight:700;margin:24px 0 12px;color:#f0f6fc">1. As a CLI tool and pytest plugin</h3>
+  <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:24px;margin-bottom:32px">
+    <p style="color:#8b949e;margin-bottom:16px">Install once and get instant error reports in any terminal:</p>
+    <div style="background:#010409;border:1px solid #30363d;border-radius:6px;padding:16px;font-family:'Menlo','Consolas',monospace;font-size:13px;line-height:1.9">
+      <div><span style="color:#3fb950">$</span> <span style="color:#e6edf3">pip install .</span> <span style="color:#484f58"># one-time install</span></div>
+      <div style="margin-top:8px"><span style="color:#3fb950">$</span> <span style="color:#e6edf3">mistake-box python mycode.py</span> <span style="color:#484f58"># run and box errors</span></div>
+      <div style="margin-top:8px"><span style="color:#3fb950">$</span> <span style="color:#e6edf3">pytest</span> <span style="color:#484f58"># auto-box every failing test</span></div>
+    </div>
+    <p style="color:#8b949e;margin-top:16px">The <code>mistake-box</code> command wraps any Python command, catches errors, and prints a friendly box instead of a raw traceback. The pytest plugin does the same for test failures automatically.</p>
+  </div>
+
+  <h3 style="font-size:1.2rem;font-weight:700;margin:24px 0 12px;color:#f0f6fc">2. As an AI-agent skill</h3>
+  <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:24px">
+    <p style="color:#8b949e;margin-bottom:16px">Give the skill to any AI coding agent and ask it to find and fix mistakes:</p>
+    <div style="background:#010409;border:1px solid #30363d;border-radius:6px;padding:16px;font-family:'Menlo','Consolas',monospace;font-size:13px;line-height:1.9">
+      <div><span style="color:#3fb950">You:</span> <span style="color:#e6edf3">"Run mistake-finder on the failing tests"</span></div>
+      <div style="margin-top:8px"><span style="color:#3fb950">You:</span> <span style="color:#e6edf3">"Check my code for mistakes"</span></div>
+      <div style="margin-top:8px"><span style="color:#3fb950">You:</span> <span style="color:#e6edf3">"Review src/myfile.py for mistakes"</span></div>
+    </div>
+    <p style="color:#8b949e;margin-top:16px">The skill (<code>SKILL.md</code>) works with <strong>any AI coding agent</strong> — Claude Code, Cursor, Codex, ChatGPT Codex, Devin, or any agent that can read files, run commands, and edit files. No vendor lock-in. No IDE required.</p>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── GET STARTED ── -->
+<section class="section" id="get-started">
+  <h2 class="section-title">Get started in 3 steps</h2>
+  <p class="section-sub">Works on Windows, Mac, and Linux. No experience needed.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div class="step-body">
+        <h4>Install Python (if you don't have it)</h4>
+        <p>Download Python 3.8+ from <a href="https://python.org/downloads">python.org/downloads</a>. On Windows, check "Add Python to PATH" during installation. Verify with <code>python --version</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div class="step-body">
+        <h4>Install the tool</h4>
+        <p>Clone the repository (or download the ZIP), open a terminal in the project folder, and run <code>pip install .</code>. This installs the <code>mistake-box</code> command and the pytest plugin.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div class="step-body">
+        <h4>Start finding mistakes</h4>
+        <p>Run <code>mistake-box python mycode.py</code> to check a file. Or run <code>pytest</code> to see failing tests boxed automatically. Try the demo files in <code>demos/</code> to practice.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;font-weight:700;margin:32px 0 16px;color:#f0f6fc">Try the demo files</h3>
+  <p style="color:#8b949e;margin-bottom:16px">The <code>demos/</code> folder has 14 Python files, each with one intentional mistake. Run them and read the box to learn what different errors look like:</p>
+  <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:20px;overflow-x:auto">
+    <table>
+      <tr><th>Demo file</th><th>What you'll learn</th></tr>
+      <tr><td><code>demos/demo_math.py</code></td><td>Why you can't take the square root of a negative number</td></tr>
+      <tr><td><code>demos/demo_json.py</code></td><td>Why JSON requires double quotes, not single quotes</td></tr>
+      <tr><td><code>demos/demo_requests.py</code></td><td>Why URLs need an <code>https://</code> scheme</td></tr>
+      <tr><td><code>demos/demo_numpy.py</code></td><td>Why arrays must have the same shape to add them</td></tr>
+      <tr><td><code>demos/demo_pandas.py</code></td><td>Why column names are case-sensitive</td></tr>
+      <tr><td><code>demos/demo_pydantic.py</code></td><td>Why Pydantic rejects the wrong data type</td></tr>
+    </table>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── SKILL SECTION ── -->
+<section class="section" id="ai-skill">
+  <h2 class="section-title">The AI-agent skill</h2>
+  <p class="section-sub">A skill file that teaches any AI coding agent how to find and fix mistakes systematically.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">📄</div>
+      <h3><code>SKILL.md</code> — The brain</h3>
+      <p>The skill instruction file. Defines two modes (failure triage and code review), a four-phase workflow, and guardrails that keep the agent safe and evidence-based.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📋</div>
+      <h3><code>review-checklist.md</code> — Six check classes</h3>
+      <p>Logic & boundaries, error handling, concurrency & state, resource & performance, security footguns, and test gaps. Each class is a separate investigation pass.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3><code>report-template.md</code> — Consistent output</h3>
+      <p>Exact formats for ranked reports in both modes. Every finding includes file:line evidence, severity, confidence, and a suggested fix.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;font-weight:700;margin:32px 0 16px;color:#f0f6fc">How to give the skill to your AI agent</h3>
+  <p style="color:#8b949e;margin-bottom:16px">The skill lives in <code>.bob/skills/mistake-finder/</code>. Tell your agent:</p>
+  <div style="background:#010409;border:1px solid #30363d;border-radius:6px;padding:16px;font-family:'Menlo','Consolas',monospace;font-size:13px;line-height:1.9;margin-bottom:16px">
+    <div><span style="color:#3fb950">"Read the file .bob/skills/mistake-finder/SKILL.md and follow its</span></div>
+    <div><span style="color:#3fb950">instructions for this task."</span></div>
+  </div>
+  <p style="color:#8b949e">You can also install it globally so it's available in every project:</p>
+  <div style="background:#010409;border:1px solid #30363d;border-radius:6px;padding:16px;font-family:'Menlo','Consolas',monospace;font-size:13px;line-height:1.9;margin-bottom:16px">
+    <div><span style="color:#3fb950">$</span> <span style="color:#e6edf3">python install_skill.py</span> <span style="color:#484f58"># install globally</span></div>
+    <div><span style="color:#3fb950">$</span> <span style="color:#e6edf3">python install_skill.py --check</span> <span style="color:#484f58"># verify install</span></div>
+    <div><span style="color:#3fb950">$</span> <span style="color:#e6edf3">python install_skill.py --remove</span> <span style="color:#484f58"># uninstall</span></div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── TECHNICAL DETAILS ── -->
+<section class="section" id="technical">
+  <h2 class="section-title">Technical details</h2>
+  <p class="section-sub">What's inside the package and how it's built.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🔒</div>
+      <h3>Safe by design</h3>
+      <p>Investigating agents are read-only. Tests are never weakened or deleted. Every finding needs <code>file:line</code> evidence. One fix at a time, with full rollback. The core tool runs entirely on your computer — no API keys, no cloud services, no data leaves your machine.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📦</div>
+      <h3>Installable package</h3>
+      <p><code>pip install .</code> registers two entry points: the <code>mistake-box</code> CLI command and the <code>pytest11</code> plugin. Works in any Python interpreter — VS Code Testing panel, PyCharm, terminal, CI.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🌐</div>
+      <h3>IDE-agnostic</h3>
+      <p>No dependency on any specific editor, AI provider, or cloud service. The skill works with any AI agent. The CLI works in any terminal. The pytest plugin works with any IDE that uses pytest.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;font-weight:700;margin:32px 0 16px;color:#f0f6fc">Package information</h3>
+  <div style="background:#161b22;border:1px solid #21262d;border-radius:10px;padding:20px;max-width:500px">
+    <table>
+      <tr><td>Package name</td><td><code>mistake-finder</code></td></tr>
+      <tr><td>CLI command</td><td><code>mistake-box</code></td></tr>
+      <tr><td>Version</td><td>1.0.0</td></tr>
+      <tr><td>Python requirement</td><td>3.8+</td></tr>
+      <tr><td>Third-party dependencies</td><td>None (core engine)</td></tr>
+      <tr><td>License</td><td>MIT</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta">
+  <h2>Ready to squash some bugs?</h2>
+  <p>Full documentation, demo files, and troubleshooting — all in the README.</p>
+  <a href="#get-started" class="btn btn-primary">Get Started</a>
+  <a href="README.md" class="btn btn-secondary">Read the README</a>
+</section>
+
+<footer>
+  Built as a portfolio project · Python debugging tool for learners and developers ·
+  your GitHub username here — replace before publishing
+</footer>
+
+</body>
+</html>
